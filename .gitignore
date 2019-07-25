@@ -41,9 +41,18 @@
 # CMake temporary files
 .qmake.stash
 Makefile
+CMakeFiles/
+*.ninja*
+cmake_install.cmake
+moc_*
+mocs_*
+CMakeCache.txt
 
 # Project build directory
 build/
 
 # vscode settings files
 .vscode/
+
+# gettext temporary files
+*.gmo
