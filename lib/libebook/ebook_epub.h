@@ -68,6 +68,8 @@ class EBook_EPUB : public EBook
 		 */
 		virtual QUrl homeUrl() const;
 
+		virtual QString ebookURLscheme() const;
+
 		/*!
          * \brief Checks whether the specific feature is present in this file.
          * \return true if it is available; false otherwise.

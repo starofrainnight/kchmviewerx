@@ -1,16 +1,11 @@
-# Project files
-SET( libebookSources
-    ebook_chm.cpp
-    ebook_epub.cpp
-    ebook.cpp
-    ebook_chm_encoding.cpp
-    ebook_search.cpp
-    helper_entitydecoder.cpp
-    helper_search_index.cpp
-    helperxmlhandler_epubcontainer.cpp
-    helperxmlhandler_epubcontent.cpp
-    helperxmlhandler_epubtoc.cpp
- )
 
-KDE4_ADD_LIBRARY( ebook STATIC ${libebookSources} )
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} EBOOK_SRCS)
+list(FILTER EBOOK_SRCS EXCLUDE REGEX "[^a-zA-Z0-9_\\.]*moc_.*")
 
+file(GLOB EBOOK_HEADERS *.h)
+qthelper_wrap_cpp(EBOOK_HEADER_MOCS ${EBOOK_HEADERS})
+
+set(EBOOK_SRCS ${EBOOK_SRCS} ${EBOOK_HEADER_MOCS})
+list(REMOVE_DUPLICATES EBOOK_SRCS)
+
+add_library(ebook STATIC ${EBOOK_SRCS})

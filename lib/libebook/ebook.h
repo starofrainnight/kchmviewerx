@@ -117,6 +117,8 @@ class EBook
 		 */
 		virtual QUrl homeUrl() const = 0;
 
+		virtual QString ebookURLscheme() const = 0;
+
 		/*!
          * \brief Checks whether the specific feature is present in this file.
 		 * \return true if it is available; false otherwise.

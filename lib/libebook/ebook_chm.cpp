@@ -88,6 +88,11 @@ QUrl EBook_CHM::homeUrl() const
 	return pathToUrl( m_home );
 }
 
+QString EBook_CHM::ebookURLscheme() const
+{
+	return QString("ms-its");
+}
+
 bool EBook_CHM::hasFeature(EBook::Feature code) const
 {
     switch ( code )

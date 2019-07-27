@@ -47,6 +47,7 @@ cmake_install.cmake
 moc_*
 mocs_*
 CMakeCache.txt
+*_autogen
 
 # Project build directory
 build/

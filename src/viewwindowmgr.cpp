@@ -21,6 +21,11 @@
 #include "viewwindow.h"
 #include "viewwindowmgr.h"
 
+#if defined(USE_WEBENGINE) && (USE_WEBENGINE == 1)
+#include <QWebEngineSettings>
+#include <QWebEnginePage>
+#define QWebPage QWebEnginePage
+#endif
 
 // A small overriden class to handle a middle click
 class ViewWindowTabWidget : public QTabWidget
@@ -367,41 +372,61 @@ void ViewWindowMgr::find( bool backward )
         // If the search text is different, we run the empty string search
         // to discard old highlighting
         if ( m_lastSearchedWord != editFind->text() )
-            current()->findText( "", webkitflags | QWebPage::HighlightAllOccurrences );
+		{
+			#if defined(USE_WEBENGINE) && (USE_WEBENGINE == 1)
+			// Do nothing
+			#else
+			webkitflags |= QWebPage::HighlightAllOccurrences 
+			#endif
+			current()->findText( "", webkitflags);
+		}            
 
         m_lastSearchedWord = editFind->text();
 
         // Now we call search with highlighting enabled, while the main search below will have
         // it disabled. This leads in both having the highlighting results AND working forward/
         // backward buttons.
-        current()->findText( editFind->text(), webkitflags | QWebPage::HighlightAllOccurrences );
+
+		#if defined(USE_WEBENGINE) && (USE_WEBENGINE == 1)
+		// Do nothing
+		#else
+		webkitflags |= QWebPage::HighlightAllOccurrences 
+		#endif
+
+        current()->findText( editFind->text(), webkitflags );
     }
 
     // Pre-hide the wrapper
     labelWrapped->hide();
 
-    bool found = current()->findText( editFind->text(), webkitflags );
+    current()->findText( editFind->text(), webkitflags, [=] (bool found) {
 
-    // If we didn't find anything, enable the wrap and try again
-    if ( !found )
-    {
-        found = current()->findText( editFind->text(), webkitflags | QWebPage::FindWrapsAroundDocument );
+		// If we didn't find anything, enable the wrap and try again
+		if ( !found )
+		{
+			#if defined(USE_WEBENGINE) && (USE_WEBENGINE == 1)
+			// Do nothing
+			#else
+			webkitflags |= QWebPage::FindWrapsAroundDocument 
+			#endif
+			current()->findText( editFind->text(), webkitflags, [=](bool found){
+				if ( found )
+					labelWrapped->show();
+			} );
+		}
 
-        if ( found )
-            labelWrapped->show();
-    }
+		if ( !frameFind->isVisible() )
+			frameFind->show();
 
-	if ( !frameFind->isVisible() )
-		frameFind->show();
+		QPalette p = editFind->palette();
 
-	QPalette p = editFind->palette();
+		if ( !found )
+			p.setColor( QPalette::Active, QPalette::Base, QColor(255, 102, 102) );
+		else
+			p.setColor( QPalette::Active, QPalette::Base, Qt::white );
 
-    if ( !found )
-		p.setColor( QPalette::Active, QPalette::Base, QColor(255, 102, 102) );
-	else
-		p.setColor( QPalette::Active, QPalette::Base, Qt::white );
-
-	editFind->setPalette( p );
+		editFind->setPalette( p );
+	});
 }
 
 
@@ -436,6 +461,17 @@ void ViewWindowMgr::copyUrlToClipboard()
 
 void ViewWindowMgr::applyBrowserSettings()
 {
+#if defined(USE_WEBENGINE) && (USE_WEBENGINE == 1)
+	QWebEngineSettings * setup = QWebEngineSettings::globalSettings();
+
+	setup->setAttribute( QWebEngineSettings::AutoLoadImages, pConfig->m_browserEnableImages );
+	setup->setAttribute( QWebEngineSettings::JavascriptEnabled, pConfig->m_browserEnableJS );
+	// setup->setAttribute( QWebEngineSettings::JavaEnabled, pConfig->m_browserEnableJava );
+	setup->setAttribute( QWebEngineSettings::PluginsEnabled, pConfig->m_browserEnablePlugins );
+	// setup->setAttribute( QWebEngineSettings::OfflineStorageDatabaseEnabled, pConfig->m_browserEnableOfflineStorage );
+	// setup->setAttribute( QWebEngineSettings::LocalStorageDatabaseEnabled, pConfig->m_browserEnableLocalStorage );
+	setup->setAttribute( QWebEngineSettings::LocalStorageEnabled, pConfig->m_browserEnableLocalStorage );
+#else
 	QWebSettings * setup = QWebSettings::globalSettings();
 
 	setup->setAttribute( QWebSettings::AutoLoadImages, pConfig->m_browserEnableImages );
@@ -445,4 +481,5 @@ void ViewWindowMgr::applyBrowserSettings()
 	setup->setAttribute( QWebSettings::OfflineStorageDatabaseEnabled, pConfig->m_browserEnableOfflineStorage );
 	setup->setAttribute( QWebSettings::LocalStorageDatabaseEnabled, pConfig->m_browserEnableLocalStorage );
 	setup->setAttribute( QWebSettings::LocalStorageEnabled, pConfig->m_browserEnableLocalStorage );
+#endif
 }

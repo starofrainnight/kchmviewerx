@@ -166,7 +166,9 @@ class MainWindow : public QMainWindow, public Ui::MainWindow
 		void 		setupActions();
 		void		setupLangEncodingMenu();
 		
+	public:
 		bool		loadFile( const QString &fileName,  bool call_open_page = true );
+	private:
 		void		closeFile();	
 		void		refreshCurrentBrowser();
 		

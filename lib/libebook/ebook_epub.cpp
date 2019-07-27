@@ -123,6 +123,12 @@ QUrl EBook_EPUB::homeUrl() const
 	return m_tocEntries[0].url;
 }
 
+QString EBook_EPUB::ebookURLscheme() const
+{
+	return QString("ms-its");
+}
+
+
 bool EBook_EPUB::hasFeature(EBook::Feature code) const
 {
     switch ( code )
