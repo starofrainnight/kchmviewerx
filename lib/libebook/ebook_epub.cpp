@@ -125,7 +125,7 @@ QUrl EBook_EPUB::homeUrl() const
 
 QString EBook_EPUB::ebookURLscheme() const
 {
-	return QString("ms-its");
+	return QString("epub");
 }
 
 
