@@ -147,11 +147,11 @@ ViewWindow * ViewWindowMgr::addNewTab( bool set_active )
 	if ( set_active || m_Windows.size() == 1 )
 		m_tabWidget->setCurrentWidget( tabdata.widget );
 	
-	// Handle clicking on link in browser window
-	connect( viewvnd,
-			 SIGNAL( linkClicked ( const QUrl& ) ),
-	         ::mainWindow, 
-			 SLOT( activateUrl( const QUrl& ) ) );
+	// TODO: Handle clicking on link in browser window
+//	connect( viewvnd,
+//			 SIGNAL( linkClicked ( const QUrl& ) ),
+//	         ::mainWindow,
+//			 SLOT( activateUrl( const QUrl& ) ) );
 
     connect( viewvnd, SIGNAL(dataLoaded(ViewWindow*)), this, SLOT(onWindowContentChanged(ViewWindow*)));
 
