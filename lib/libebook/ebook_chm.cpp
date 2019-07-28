@@ -44,6 +44,7 @@ EBook_CHM::EBook_CHM()
 {
 	m_envOptions = getenv("KCHMVIEWEROPTS");
 	m_chmFile = NULL;
+	m_chmFileReader = NULL;
 	m_filename = m_font = QString::null;
 
 	m_textCodec = 0;
@@ -64,8 +65,12 @@ void EBook_CHM::close()
 		return;
 
 	chm_close( m_chmFile );
-
+	delete m_chmFile;
 	m_chmFile = NULL;
+
+	delete m_chmFileReader;
+	m_chmFileReader = NULL;
+
 	m_filename = m_font = QString::null;
 
 	m_home.clear();
@@ -206,7 +211,7 @@ bool EBook_CHM::getFileContentAsBinary( QByteArray &data, const QUrl &url ) cons
 
 bool EBook_CHM::getBinaryContent( QByteArray &data, const QString &url ) const
 {
-	chmUnitInfo ui;
+	chm_entry ui;
 
 	if( !ResolveObject( url, &ui ) )
 		return false;
@@ -242,12 +247,20 @@ bool EBook_CHM::getTextContent( QString& str, const QString& url, bool internal_
 
 int EBook_CHM::getContentSize(const QString &url)
 {
-	chmUnitInfo ui;
+	chm_entry ui;
 
 	if( !ResolveObject( url, &ui ) )
 		return -1;
 
 	return ui.length;
+}
+
+static int64_t my_chm_reader(void* ctx, void* buf, int64_t off, int64_t len)
+{
+	auto file = static_cast<QFile *>(ctx);
+
+	file->seek(static_cast<qint64>(off));
+	return static_cast<int64_t>(file->read(static_cast<char*>(buf), len));
 }
 
 bool EBook_CHM::load(const QString &archiveName)
@@ -263,17 +276,26 @@ bool EBook_CHM::load(const QString &archiveName)
 	if( m_chmFile )
 		close();
 
-#if defined (WIN32)
-    // chm_open on Windows OS uses the following prototype:
-    //   struct chmFile* chm_open(BSTR filename);
-    //
-    // however internally it simply passes the filename
-    // directly to CreateFileW function without any conversion.
-    // Thus we need to pass it as WCHAR * and not BSTR.
-    m_chmFile = chm_open( (BSTR) filename.toStdWString().c_str() );
-#else
-	m_chmFile = chm_open( QFile::encodeName(filename) );
-#endif
+	m_chmFile = new chm_file();
+	m_chmFileReader = new QFile();
+	{
+		bool isOpenSuccessed = false;
+		m_chmFileReader->setFileName(filename);
+
+		if(m_chmFileReader->open(QFile::ReadOnly))
+		{
+			isOpenSuccessed = chm_parse(m_chmFile, my_chm_reader, m_chmFileReader);
+		}
+
+		if(!isOpenSuccessed)
+		{
+			delete m_chmFile;
+			m_chmFile = NULL;
+
+			delete m_chmFileReader;
+			m_chmFileReader = NULL;
+		}
+	}
 
 	if ( m_chmFile == NULL )
 		return false;
@@ -578,29 +600,41 @@ bool EBook_CHM::parseFileAndFillArray( const QString& file, QList< ParsedEntry >
 	return true;
 }
 
-bool EBook_CHM::ResolveObject(const QString& fileName, chmUnitInfo *ui) const
+bool EBook_CHM::ResolveObject(const QString& fileName, chm_entry *ui) const
 {
-	return m_chmFile != NULL
-			&& ::chm_resolve_object(m_chmFile, qPrintable( fileName ), ui) ==
-			CHM_RESOLVE_SUCCESS;
+	if(m_chmFile == NULL)
+	{
+		return false;
+	}
+
+	for (int i = 0; i < m_chmFile->n_entries; ++i)
+	{
+		auto target_entry = m_chmFile->entries[i];
+
+		if(0 != qstrcmp(qPrintable( fileName ), target_entry->path))
+		{
+			continue;
+		}
+
+		*ui = *target_entry;
+		return true;
+	}
+
+	return false;
 }
 
 
 bool EBook_CHM::hasFile(const QString & fileName) const
 {
-	chmUnitInfo ui;
-
-	return m_chmFile != NULL
-			&& ::chm_resolve_object(m_chmFile, qPrintable( fileName ), &ui) ==
-			CHM_RESOLVE_SUCCESS;
+	chm_entry ui;
+	return ResolveObject(fileName, &ui);
 }
 
 
-size_t EBook_CHM::RetrieveObject(const chmUnitInfo *ui, unsigned char *buffer,
-								LONGUINT64 fileOffset, LONGINT64 bufferSize) const
+size_t EBook_CHM::RetrieveObject(const chm_entry *ui, unsigned char *buffer,
+								int64_t fileOffset, int64_t bufferSize) const
 {
-	return ::chm_retrieve_object(m_chmFile, const_cast<chmUnitInfo*>(ui),
-								 buffer, fileOffset, bufferSize);
+	return ::chm_retrieve_entry(m_chmFile, const_cast<chm_entry*>(ui), buffer, fileOffset, bufferSize);
 }
 
 bool EBook_CHM::getInfoFromWindows()
@@ -608,7 +642,7 @@ bool EBook_CHM::getInfoFromWindows()
 #define WIN_HEADER_LEN 0x08
 	unsigned char buffer[BUF_SIZE];
 	unsigned int factor;
-	chmUnitInfo ui;
+	chm_entry ui;
 	long size = 0;
 
 	if ( ResolveObject("/#WINDOWS", &ui) )
@@ -681,7 +715,7 @@ bool EBook_CHM::getInfoFromWindows()
 bool EBook_CHM::getInfoFromSystem()
 {
 	unsigned char buffer[BUF_SIZE];
-	chmUnitInfo ui;
+	chm_entry ui;
 
 	int index = 0;
 	unsigned char* cursor = NULL, *p;
@@ -694,7 +728,7 @@ bool EBook_CHM::getInfoFromSystem()
 		return false;
 
 	// Can we pull BUFF_SIZE bytes of the #SYSTEM file?
-	if ( (size = RetrieveObject (&ui, buffer, 4, BUF_SIZE)) == 0 )
+	if ( (size = RetrieveObject (&ui, buffer, 4, BUF_SIZE)) <= 0 )
 		return false;
 
 	buffer[size - 1] = 0;
@@ -798,17 +832,19 @@ QString EBook_CHM::getTopicByUrl( const QUrl& url )
 }
 
 
-static int chm_enumerator_callback( struct chmFile*, struct chmUnitInfo *ui, void *context )
-{
-    EBook_CHM tmp;
-    ((QList<QUrl> *) context)->push_back( tmp.pathToUrl( ui->path ) );
-	return CHM_ENUMERATOR_CONTINUE;
-}
-
 bool EBook_CHM::enumerateFiles(QList<QUrl> &files )
 {
+	EBook_CHM tmp;
+
 	files.clear();
-	return chm_enumerate( m_chmFile, CHM_ENUMERATE_ALL, chm_enumerator_callback, &files );
+	for(int i = 0; i < m_chmFile->n_entries; ++i )
+	{
+		auto entry = m_chmFile->entries[i];
+
+		files.push_back(tmp.pathToUrl(entry->path));
+	}
+
+	return true;
 }
 
 QString EBook_CHM::currentEncoding() const

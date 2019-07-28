@@ -9,3 +9,4 @@ set(EBOOK_SRCS ${EBOOK_SRCS} ${EBOOK_HEADER_MOCS})
 list(REMOVE_DUPLICATES EBOOK_SRCS)
 
 add_library(ebook STATIC ${EBOOK_SRCS})
+target_link_libraries(ebook chm)

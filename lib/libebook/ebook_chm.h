@@ -26,7 +26,7 @@
 #if defined (WIN32)
     #define PPC_BSTR
 #endif
-#include <chm_lib.h>
+#include "chm_lib.h"
 
 #include "ebook.h"
 #include "helper_entitydecoder.h"
@@ -205,10 +205,10 @@ class EBook_CHM : public EBook
 		bool hasFile( const QString& fileName ) const;
 
 		//! Looks up fileName in the archive.
-		bool ResolveObject( const QString& fileName, chmUnitInfo *ui ) const;
+		bool ResolveObject( const QString& fileName, chm_entry *ui ) const;
 
 		//!  Retrieves an uncompressed chunk of a file in the .chm.
-		size_t RetrieveObject( const chmUnitInfo *ui, unsigned char *buffer, LONGUINT64 fileOffset, LONGINT64 bufferSize) const;
+		size_t RetrieveObject( const chm_entry *ui, unsigned char *buffer, int64_t fileOffset, int64_t bufferSize) const;
 
 		//! Encode the string with the currently selected text codec, if possible. Or return as-is, if not.
 		inline QString encodeWithCurrentCodec( const QByteArray& str) const
@@ -280,7 +280,8 @@ class EBook_CHM : public EBook
 		// Members
 
 		//! Pointer to the chmlib structure
-		chmFile	*	m_chmFile;
+		chm_file	*	m_chmFile;
+		QFile *  m_chmFileReader;
 
 		//! Opened file name
 		QString  	m_filename;
@@ -315,16 +316,16 @@ class EBook_CHM : public EBook
 		bool		m_lookupTablesValid;
 
 		//! pointer to /#TOPICS
-		chmUnitInfo	m_chmTOPICS;
+		chm_entry 	m_chmTOPICS;
 
 		//! pointer to /#STRINGS
-		chmUnitInfo	m_chmSTRINGS;
+		chm_entry	m_chmSTRINGS;
 
 		//! pointer to /#URLTBL
-		chmUnitInfo	m_chmURLTBL;
+		chm_entry	m_chmURLTBL;
 
 		//! pointer to /#URLSTR
-		chmUnitInfo	m_chmURLSTR;
+		chm_entry	m_chmURLSTR;
 
 		//! Indicates whether TOC, either binary or text, is available.
 		bool			m_tocAvailable;

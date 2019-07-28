@@ -18,8 +18,8 @@ list(REMOVE_DUPLICATES KCHMVIEWER_SRCS)
 
 add_executable(kchmviewer ${KCHMVIEWER_SRCS} ${KCHMVIEWER_UIS} ${KCHMVIEWER_QRCS})
 target_link_libraries(kchmviewer
+	chm
 	ebook
-	${LIBCHM_LIBRARY}
 	${LIBZIP_LIBRARY}
 	Qt5::Widgets
 	Qt5::WebEngine

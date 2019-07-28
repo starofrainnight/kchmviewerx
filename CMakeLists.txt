@@ -15,7 +15,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 # Necessary packages
 find_package(Qt5 COMPONENTS	Widgets WebEngine WebEngineWidgets WebView PrintSupport Xml DBus Network REQUIRED)
-find_package(Libchm REQUIRED)
 
 include_directories(
 	${Qt5Widgets_INCLUDE_DIRS}
@@ -56,9 +55,13 @@ else ()
 endif ()
 
 # Set compilation params
-include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/lib/libebook)
+include_directories(
+	${CMAKE_SOURCE_DIR}/src 
+	${CMAKE_SOURCE_DIR}/lib/libebook
+	${CMAKE_SOURCE_DIR}/lib/libchm)
 
 # Run in those subdirectories
+add_subdirectory( lib/libchm )
 add_subdirectory( lib/libebook )
 add_subdirectory( src )
 add_subdirectory( po )
